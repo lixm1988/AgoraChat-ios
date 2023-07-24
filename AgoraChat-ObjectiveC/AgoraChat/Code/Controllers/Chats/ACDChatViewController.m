@@ -31,8 +31,11 @@
 #import "AgoraChatCallCell.h"
 #import "AgoraChatCallKit/AgoraChatCallKit.h"
 #import "ACDChatRecordViewController.h"
+#import "ACDTextTranslationCell.h"
+#import "ACDTextTranslationBubbleView.h"
+#import "EaseMessageModel+Translation.h"
 
-@interface ACDChatViewController ()<EaseChatViewControllerDelegate, AgoraChatroomManagerDelegate, AgoraChatGroupManagerDelegate, EaseMessageCellDelegate>
+@interface ACDChatViewController ()<EaseChatViewControllerDelegate, AgoraChatroomManagerDelegate, AgoraChatGroupManagerDelegate, EaseMessageCellDelegate,TranslationCellDelegate>
 @property (nonatomic, strong) EaseConversationModel *conversationModel;
 @property (nonatomic, strong) UILabel *titleLabel;
 @property (nonatomic, strong) UILabel *titleDetailLabel;
@@ -237,6 +240,14 @@
                 return cell;
             }
         }
+    
+    if (messageModel.isTranslation) {
+        ACDTextTranslationCell* textTranslationCell = [[ACDTextTranslationCell alloc] initWithDirection:messageModel.message.direction chatType:messageModel.message.chatType messageType:50 viewModel:self.viewModel];
+        textTranslationCell.delegate = self.chatController;
+        textTranslationCell.model = messageModel;
+        textTranslationCell.translateDelegate = self;
+        return textTranslationCell;
+    }
 
     //@{kMSG_EXT_NEWNOTI : kNOTI_EXT_ADDGROUP, kNOTI_EXT_USERID : mutableStr}
     if (messageModel.message.body.type == AgoraChatMessageBodyTypeText) {
@@ -291,6 +302,14 @@
     return model;
 }
 
+- (AgoraChatMessage *)willSendMessage:(AgoraChatMessage *)aMessage
+{
+    if (aMessage.body.type == AgoraChatMessageTypeText && ACDDemoOptions.sharedOptions.enableTranslate && ACDDemoOptions.sharedOptions.autoLanguages.count > 0) {
+        AgoraChatTextMessageBody* textBody = (AgoraChatTextMessageBody*)aMessage.body;
+        textBody.targetLanguages = ACDDemoOptions.sharedOptions.autoLanguages;
+    }
+    return aMessage;
+}
 
 - (void)avatarDidSelected:(id<EaseUserProfile>)userData
 {
@@ -365,6 +384,12 @@
             [defaultLongPressItems addObject:reportItem];
         }
     }
+    if (msgModel.message.body.type == AgoraChatMessageTypeText && ACDDemoOptions.sharedOptions.enableTranslate && ACDDemoOptions.sharedOptions.demandLanguage.length > 0) {
+        EaseExtendMenuModel *reportItem = [[EaseExtendMenuModel alloc]initWithData:[UIImage imageNamed:@"report"] funcDesc:@"Translate" handle:^(NSString * _Nonnull itemDesc, BOOL isExecuted) {
+            [weakSelf translateMessage:messageModel];
+        }];
+        [defaultLongPressItems addObject:reportItem];
+    }
     return defaultLongPressItems;
 }
 
@@ -395,6 +420,25 @@
 - (void)pushToReportMessageViewController:(EaseMessageModel *)messageModel {
     ACDReportMessageViewController *vc = [[ACDReportMessageViewController alloc] initWithReportMessage:messageModel];
     [self.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)translateMessage:(EaseMessageModel*)model {
+    if (model.message.body.type == AgoraChatMessageBodyTypeText) {
+        NSString *text = ((AgoraChatTextMessageBody*)model.message.body).text;
+        if (text.length > 0) {
+            [self showHudInView:self.view hint:@"Translating..."];
+            WEAK_SELF
+            [AgoraChatClient.sharedClient.chatManager translateMessage:model.message targetLanguages:@[ACDDemoOptions.sharedOptions.demandLanguage] completion:^(AgoraChatMessage * _Nullable message, AgoraChatError * _Nullable error) {
+                [weakSelf hideHud];
+                if (!error) {
+                    model.showTranslation = YES;
+                    [weakSelf.chatController refreshTableView:NO];
+                } else {
+                    [weakSelf showHint:@"Translate failed"];
+                }
+            }];
+        }
+    }
 }
 
 #pragma mark - data
@@ -793,6 +837,22 @@
     vc.hidesBottomBarWhenPushed = YES;
     [self.navigationController pushViewController:vc animated:YES];
 
+}
+
+- (void)cellDidRetryTranslate:(ACDTextTranslationCell *)cell
+{
+    cell.model.translateStatus = TranslateStatusTranslating;
+    WEAK_SELF
+    [AgoraChatClient.sharedClient.chatManager translateMessage:cell.model.message targetLanguages:@[ACDDemoOptions.sharedOptions.demandLanguage] completion:^(AgoraChatMessage * _Nullable message, AgoraChatError * _Nullable error) {
+        if (!error) {
+            cell.model.translateStatus = TranslateStatusSuccess;
+        } else {
+            cell.model.translateStatus = TranslateStatusFailed;
+        }
+        NSIndexPath* path = [self.chatController.tableView indexPathForCell:cell];
+        if (path)
+            [weakSelf.chatController.tableView reloadRowsAtIndexPaths:@[path] withRowAnimation:UITableViewRowAnimationNone];
+    }];
 }
 
 @end

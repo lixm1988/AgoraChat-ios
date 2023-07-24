@@ -54,6 +54,10 @@ static NSString *kOptions_TranslateLanguage = @"TranslateLanguage";
 static NSString *kOptions_playVibration = @"playVibration";
 static NSString *kOptions_playNewMsgSound = @"playNewMsgSound";
 
+static NSString * _Nonnull kOptions_enableTranslate = @"EnableTranslate";
+static NSString * _Nonnull kOptions_demandLanguage = @"demandLanguage";
+static NSString * _Nonnull kOptions_autoLanguages = @"autoLanguages";
+
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -95,6 +99,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic) BOOL  playVibration;
 @property (nonatomic) BOOL  playNewMsgSound;
 @property (nonatomic) NSInteger tokenExpiredTimestamp;
+
+@property (nonatomic) BOOL enableTranslate;
+@property (nonatomic, strong) NSString* demandLanguage;
+@property (nonatomic, strong) NSArray<NSString*>* autoLanguages;
 
 
 + (instancetype)sharedOptions;

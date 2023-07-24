@@ -53,6 +53,10 @@ static ACDDemoOptions *sharedOptions = nil;
         self.playVibration = YES;
         self.playNewMsgSound = YES;
         self.tokenExpiredTimestamp = 0;
+        
+        self.enableTranslate = NO;
+        self.demandLanguage = @"";
+        self.autoLanguages = [NSArray array];
     }
     
     return self;
@@ -114,6 +118,10 @@ static ACDDemoOptions *sharedOptions = nil;
         self.playVibration = [aDecoder decodeBoolForKey:kOptions_playVibration];
         self.playNewMsgSound = [aDecoder decodeBoolForKey:kOptions_playNewMsgSound];
         self.tokenExpiredTimestamp = 0;
+        
+        self.enableTranslate = [aDecoder decodeBoolForKey:kOptions_enableTranslate];
+        self.autoLanguages = [aDecoder decodeObjectForKey:kOptions_autoLanguages];
+        self.demandLanguage = [aDecoder decodeObjectForKey:kOptions_demandLanguage];
 
     }
     return self;
@@ -167,6 +175,9 @@ static ACDDemoOptions *sharedOptions = nil;
     [aCoder encodeBool:self.playVibration forKey:kOptions_playVibration];
     [aCoder encodeBool:self.playNewMsgSound forKey:kOptions_playNewMsgSound];
 
+    [aCoder encodeBool:self.enableTranslate forKey:kOptions_enableTranslate];
+    [aCoder encodeObject:self.autoLanguages forKey:kOptions_autoLanguages];
+    [aCoder encodeObject:self.demandLanguage forKey:kOptions_demandLanguage];
 }
 
 - (id)copyWithZone:(nullable NSZone *)zone
@@ -208,6 +219,9 @@ static ACDDemoOptions *sharedOptions = nil;
     retModel.playVibration = self.playVibration;
     retModel.playNewMsgSound = self.playNewMsgSound;
     retModel.tokenExpiredTimestamp = self.tokenExpiredTimestamp;
+    retModel.enableTranslate = self.enableTranslate;
+    retModel.autoLanguages = self.autoLanguages;
+    retModel.demandLanguage = self.demandLanguage;
     
     return retModel;
 }
